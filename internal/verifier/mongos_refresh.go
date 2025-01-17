@@ -5,7 +5,6 @@ import (
 
 	"github.com/10gen/migration-verifier/internal/logger"
 	"github.com/10gen/migration-verifier/internal/retry"
-	"github.com/10gen/migration-verifier/mmongo"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -47,14 +46,14 @@ func RefreshAllMongosInstances(
 			return errors.Wrapf(err, "failed to connect to mongos host %#q", host)
 		}
 
-		shardConnStr, err := getAnyExistingShardConnectionStr(
-			ctx,
-			l,
-			singleHostClient,
-		)
-		if err != nil {
-			return err
-		}
+		// shardConnStr, err := getAnyExistingShardConnectionStr(
+		// 	ctx,
+		// 	l,
+		// 	singleHostClient,
+		// )
+		// if err != nil {
+		// 	return err
+		// }
 
 		err = retry.New().WithCallback(
 			func(ctx context.Context, _ *retry.FuncInfo) error {
@@ -73,38 +72,39 @@ func RefreshAllMongosInstances(
 					return errors.Wrap(err, "failed to query the config server")
 				}
 
-				// Run `addShard` on an existing shard to force the mongos' ShardRegistry to refresh. This combined
-				// with the previous step guarantees that all shards are known to the mongos.
-				err = singleHostClient.
-					Database("admin").
-					RunCommand(ctx, bson.D{{"addShard", shardConnStr}}).
-					Err()
-				if err != nil {
-					// TODO (REP-3952): Do this error check using the `shared` package.
-					if mmongo.ErrorHasCode(err, UnauthorizedErrCode) {
-						return errors.New(
-							"missing privileges to refresh mongos instances on the source; please restart " +
-								"migration-verifier with a URI that includes the `clusterManager` role",
-						)
-					}
-					return errors.Wrap(
-						err,
-						"failed to execute `addShard` to force the mongos' ShardRegistry to refresh",
-					)
-				}
+				// // Run `addShard` on an existing shard to force the mongos' ShardRegistry to refresh. This combined
+				// // with the previous step guarantees that all shards are known to the mongos.
+				// err = singleHostClient.
+				// 	Database("admin").
+				// 	RunCommand(ctx, bson.D{{"addShard", shardConnStr}}).
+				// 	Err()
+				// if err != nil {
+				// 	fmt.Println(err)
+				// 	// TODO (REP-3952): Do this error check using the `shared` package.
+				// 	if mmongo.ErrorHasCode(err, UnauthorizedErrCode) {
+				// 		return errors.New(
+				// 			"missing privileges to refresh mongos instances on the source; please restart " +
+				// 				"migration-verifier with a URI that includes the `clusterManager` role",
+				// 		)
+				// 	}
+				// 	return errors.Wrap(
+				// 		err,
+				// 		"failed to execute `addShard` to force the mongos' ShardRegistry to refresh",
+				// 	)
+				// }
 
 				// We could alternatively run `flushRouterConfig: <dbName>` for each db, but that requires a
 				// listDatabases call. We should _never_ run `flushRouterConfig: <dName>.<collName>` because that
 				// would cause the mongos to no longer know whether the collection is sharded or not. See this
 				// document: https://docs.google.com/document/d/1C0EG2Qx2ECZbUsaNdGDTY-5JK0NISeo5_UT9oMG1dps/edit
 				// for more information.
-				err = singleHostClient.
-					Database("admin").
-					RunCommand(ctx, bson.D{{"flushRouterConfig", 1}}).
-					Err()
-				if err != nil {
-					return errors.Wrap(err, "failed to flush the mongos config")
-				}
+				// err = singleHostClient.
+				// 	Database("admin").
+				// 	RunCommand(ctx, bson.D{{"flushRouterConfig", 1}}).
+				// 	Err()
+				// if err != nil {
+				// 	return errors.Wrap(err, "failed to flush the mongos config")
+				// }
 
 				return nil
 			},

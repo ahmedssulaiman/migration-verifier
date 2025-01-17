@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/10gen/migration-verifier/internal/util"
 	"github.com/pkg/errors"
@@ -23,8 +24,11 @@ func (verifier *Verifier) SetSrcURI(ctx context.Context, uri string) error {
 	}
 
 	verifier.srcClusterInfo = &clusterInfo
-
+	fmt.Println(verifier.srcClusterInfo)
+	fmt.Println(clusterInfo.VersionArray[0])
+	fmt.Println(clusterInfo.Topology)
 	if clusterInfo.VersionArray[0] < 5 && clusterInfo.Topology == util.TopologySharded {
+		fmt.Println("HERE")
 		err := RefreshAllMongosInstances(
 			ctx,
 			verifier.logger,
@@ -89,15 +93,15 @@ func checkURIAgainstServerVersion(uri string, bi util.ClusterInfo) error {
 		panic("parsed and validated connection string (" + uri + ") must not be nil")
 	}
 
-	// migration-verifier disallows SRV strings for pre-v5 clusters for the
-	// same reason as mongosync’s embedded verifier: mongoses can be added
-	// dynamically, which means they could avoid the critical router-flush that
-	// SERVER-32198 necessitates for pre-v5 clusters.
-	if cs.Scheme == connstring.SchemeMongoDBSRV {
-		return errors.Errorf(
-			"SRV connection string is forbidden for pre-v5 clusters",
-		)
-	}
+	// // migration-verifier disallows SRV strings for pre-v5 clusters for the
+	// // same reason as mongosync’s embedded verifier: mongoses can be added
+	// // dynamically, which means they could avoid the critical router-flush that
+	// // SERVER-32198 necessitates for pre-v5 clusters.
+	// if cs.Scheme == connstring.SchemeMongoDBSRV {
+	// 	return errors.Errorf(
+	// 		"SRV connection string is forbidden for pre-v5 clusters",
+	// 	)
+	// }
 
 	return nil
 }
